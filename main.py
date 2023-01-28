@@ -1,30 +1,61 @@
-from dash import Dash, html, dcc
-import plotly.express as px
+# Run this app with `python app.py` and
+# visit http://127.0.0.1:8050/ in your web browser.
 import pandas as pd
+import pymysql
+from dash import Dash, dcc, html, Input, Output, dash_table
 
 app = Dash(__name__)
-# assume you have a "long-form" data frame
-# see https://plotly.com/python/px-arguments/ for more options
-df = pd.DataFrame({
-    "Fruit": ["Apples", "Oranges", "Bananas", "Apples", "Oranges", "Bananas"],
-    "Amount": [4, 1, 2, 2, 4, 5],
-    "City": ["SF", "SF", "SF", "Montreal", "Montreal", "Montreal"]
-})
 
-fig = px.bar(df, x="Fruit", y="Amount", color="City", barmode="group")
+conn = pymysql.connect(host='127.0.0.1', user='root',
+                       passwd='6456456456456456-*-*/hfd -*-/*-gd*//>?[gdfg', db='mysql')
+cur = conn.cursor()
+cur.execute('USE goodreads')
+cur.execute('SHOW TABLES;')
 
-app.layout = html.Div(children=[
-    html.H1(children='Hello Dash'),
+table_names = cur.fetchall()[0]
+options = []
 
-    html.Div(children='''
-        Dash: A web application framework for your data.
-    '''),
+for name in table_names:
+    options.append({
+        "label": name,
+        "value": pd.read_sql(f'SELECT * FROM {name}', conn).to_json()
+    })
 
-    dcc.Graph(
-        id='example-graph',
-        figure=fig
-    )
-])
+cur.close()
+conn.close()
 
-if __name__ == '__main__':
+app.layout = html.Div(
+    [
+        dcc.Dropdown(
+            options=[
+                {
+                    "label": "Car-sharing data",
+                    "value": "https://raw.githubusercontent.com/plotly/datasets/master/carshare_data.json",
+                },
+                {
+                    "label": "Iris data",
+                    "value": "https://raw.githubusercontent.com/plotly/datasets/master/iris_data.json",
+                },
+            ],
+            value="https://raw.githubusercontent.com/plotly/datasets/master/iris_data.json",
+            id="data-select",
+        ),
+        html.Br(),
+        dash_table.DataTable(id="my-table-promises", page_size=20),
+    ]
+)
+
+app.clientside_callback(
+    """
+    async function(value) {
+    const response = await fetch(value);
+    const data = await response.json();
+    return data;
+    }
+    """,
+    Output("my-table-promises", "data"),
+    Input("data-select", "value"),
+)
+
+if __name__ == "__main__":
     app.run_server(debug=True)
