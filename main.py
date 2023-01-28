@@ -14,11 +14,16 @@ cur.execute('SHOW TABLES;')
 
 table_names = cur.fetchall()[0]
 options = []
+values = []
 
 for name in table_names:
+    data = pd.read_sql(f'SELECT * FROM {name}', conn)
+    col_names = data.columns
+    values = [data.loc[i].to_dict() for i in range(len(data))]
+
     options.append({
         "label": name,
-        "value": pd.read_sql(f'SELECT * FROM {name}', conn).to_json()
+        "value": values
     })
 
 cur.close()
