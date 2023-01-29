@@ -1,10 +1,9 @@
-# Run this app with `python app.py` and
-# visit http://127.0.0.1:8050/ in your web browser.
-import pandas as pd
-import pymysql
 from dash import Dash, dcc, html, Input, Output, dash_table
+import pymysql
+import pandas as pd
 
 app = Dash(__name__)
+
 
 conn = pymysql.connect(host='127.0.0.1', user='root',
                        passwd='6456456456456456-*-*/hfd -*-/*-gd*//>?[gdfg', db='mysql')
@@ -29,6 +28,13 @@ for name in table_names:
 cur.close()
 conn.close()
 
+
+car_sharing_data = pd.read_json('https://raw.githubusercontent.com/plotly/datasets/master/carshare_data.json')
+iris_data = pd.read_json('https://raw.githubusercontent.com/plotly/datasets/master/iris_data.json')
+
+iris_data = [iris_data.loc[i].to_dict() for i in range(len(iris_data))]
+print(values)
+
 app.layout = html.Div(
     [
         dcc.Dropdown(
@@ -46,7 +52,7 @@ app.layout = html.Div(
             id="data-select",
         ),
         html.Br(),
-        dash_table.DataTable(id="my-table-promises", page_size=20),
+        dash_table.DataTable(id="my-table-promises", page_size=10),
     ]
 )
 
