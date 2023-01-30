@@ -5,7 +5,7 @@ conn = pymysql.connect(host='127.0.0.1', user='root',
 
 cur = conn.cursor()
 cur.execute('USE goodreads')
-cur.execute('SHOW TABLES;')
+cur.execute('SHOW TABLES')
 
 print(cur.fetchall())
 cur.close()

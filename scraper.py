@@ -1,108 +1,148 @@
-import re
+import json
+import time
 from urllib.error import HTTPError
-from urllib.request import urlopen
-import urllib
 from bs4 import BeautifulSoup
-import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
-import json
-
-email = 'omarghanem1210@gmail.com'
-password = 'sekiro18*'
-
-driver = webdriver.Chrome()
-driver.get('https://www.goodreads.com/ap/signin?language=en_US&openid.assoc_handle=amzn_goodreads_web_na&openid'
-           '.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F'
-           '%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.mode=checkid_setup&openid.ns=http%3A%2F'
-           '%2Fspecs.openid.net%2Fauth%2F2.0&openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.goodreads'
-           '.com%2Fap-handler%2Fsign-in&siteState=9d60eb2d7ef31314ecc2c6d068065c5e')
-ID = 'id'
-NAME = 'name'
-XPATH = 'xpath'
-LINK_TEXT = 'link text'
-PARTIAL_LINK_TEXT = 'partial link text'
-TAG_NAME = 'tag name'
-CLASS_NAME = 'class name'
-CSS_SELECTOR = 'css selector'
-
-input_email = driver.find_element(By.ID, 'ap_email')
-input_password = driver.find_element(By.ID, 'ap_password')
-sign_in = driver.find_element(By.ID, 'signInSubmit')
-
-input_email.send_keys(email)
-input_password.send_keys(password)
-sign_in.click()
+import pymysql
+import re
 
 start_url = 'https://www.goodreads.com/shelf/show/'
-
 shelves = ['published-2020', 'published-2021', 'published-2022', 'published-2023']
 
-shelf = shelves[0]
-i = 1
-current_page = f'{start_url}/{shelf}?page={1}'
 
-driver.get(current_page)
-html = driver.page_source
-bs = BeautifulSoup(html, 'lxml')
+def log_in():
+    email = 'omarghanem1210@gmail.com'
+    password = 'sekiro18*'
+    driver = webdriver.Chrome()
+    driver.get('https://www.goodreads.com/ap/signin?language=en_US&openid.assoc_handle=amzn_goodreads_web_na&openid'
+               '.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F'
+               '%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.mode=checkid_setup&openid.ns=http%3A%2F'
+               '%2Fspecs.openid.net%2Fauth%2F2.0&openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.goodreads'
+               '.com%2Fap-handler%2Fsign-in&siteState=9d60eb2d7ef31314ecc2c6d068065c5e')
+    input_email = driver.find_element(By.ID, 'ap_email')
+    input_password = driver.find_element(By.ID, 'ap_password')
+    sign_in = driver.find_element(By.ID, 'signInSubmit')
 
-book_links = bs.find_all('a', {'class': 'bookTitle'})
-for link in book_links:
-    href = 'https://www.goodreads.com/' + link.attrs['href']
-    driver.get(href)
-    try:
-        book_html = driver.page_source
-    except HTTPError as e:
-        book_html = driver.page_source
-    bs = BeautifulSoup(book_html, 'lxml')
-    summary = bs.find('meta', property='og:description').attrs['content']
-    information = str(bs.find('script', {'type': 'application/ld+json'}).contents).replace('[', '').replace(']', '')[
-                  1:-1]
-    information = json.loads(information)
-    title = information['name']
-    page_count = information['numberOfPages']
-    author_name = information['author']['name']
-    average_rating = information['aggregateRating']['ratingValue']
-    num_ratings = information['aggregateRating']['ratingCount']
-    num_reviews = information['aggregateRating']['reviewCount']
-    genre = str(bs.find('span', {'class': 'BookPageMetadataSection__genreButton'}).find('a').attrs['href'])[33:]
-    print(f'{summary}   {page_count}  {author_name}  {average_rating}   {num_ratings}   {num_reviews}  {genre}')
+    input_email.send_keys(email)
+    input_password.send_keys(password)
+    sign_in.click()
+    return driver
 
-    try:
-        page_count = int(bs.find('meta', property='books:page_count').attrs['content'])
-    except:
-        page_count = None
-    author_name = str(bs.find('span', {'itemprop': 'name'}).contents).replace('[', '').replace(']', '')
-    genre = str(bs.find('a', {'actionLinkLite bookPageGenreLink'}).contents).replace('[', '').replace(']', '')
-    average_rating = float(str(bs.find('span', {'itemprop': 'ratingValue'}).contents). \
-                           replace('[', '').replace(']', '').replace('\\n', '').replace(' ', '')[1:-2])
-    num_ratings = int(bs.find('meta', {'itemprop': 'ratingCount'}).attrs['content'])
-    top_review = str(bs.find('span', {'id': re.compile('^freeTextContainer')}).contents).replace('[',
-                                                                                                 '').replace(
-        ']', '')
-    top_review = re.sub('<[^>]*>', '', top_review)
-    num_reviews = int(bs.find('meta', {'itemprop': 'reviewCount'}).attrs['content'])
-    print(f'{average_rating}, {num_ratings}')
-"""
-while True:
-    html = urlopen(current_page)
-    bs = BeautifulSoup(html, 'html.parser')
-    book_links = bs.find_all('a', {'class': 'bookTitle'})
 
-    if book_links is None:
-        break
-    for link in book_links:
-        href = 'https://www.goodreads.com/' + link.attrs['href']
-        print(href)
-        book_html = requests.get(href).text
-        bs = BeautifulSoup(book_html, 'html.parser')
-        title = bs.find('meta', property='og:title')
-        summary = bs.find('meta', property='og:description')
-        page_count = bs.find('meta', property='books:page_count')
-        name = bs.find('span', {'itemprop': 'name'}).text
+def scrape(driver, shelves, start_url):
+    with open('location.txt', 'r') as file:
+        i = int(file.readline())
+        shelf = int(file.readline())
 
-        print(title.attrs['content'])
-"""
+    while True:
+        current_page = f'{start_url}/{shelves[shelf]}?page={i}'
+        driver.get(current_page)
+
+        html = driver.page_source.encode('utf-8').strip()
+        bs = BeautifulSoup(html, 'lxml')
+
+        book_links = bs.find_all('a', {'class': 'bookTitle'})
+        if len(book_links) == 0:
+            break
+        for link in book_links:
+            href = 'https://www.goodreads.com/' + link.attrs['href']
+            print(href)
+            driver.get(href)
+            try:
+                book_html = driver.page_source
+            except HTTPError as e:
+                book_html = driver.page_source
+            bs = BeautifulSoup(book_html, 'lxml')
+            try:
+                summary = str(bs.find('span', {'class': 'Formatted'}).contents)
+                summary = re.sub('<[^>]*>', '', summary)[1:-1]
+            except:
+                time.sleep(5)
+                driver.get(href)
+                time.sleep(2)
+                book_html = driver.page_source
+                bs = BeautifulSoup(book_html, 'lxml')
+                summary = str(bs.find('span', {'class': 'Formatted'}).contents)
+                summary = re.sub('<[^>]*>', '', summary)
+
+            information = str(bs.find('script', {'type': 'application/ld+json'}).contents).replace('[', '').replace(']',
+                                                                                                                    '')[
+                          1:-1]
+            information1 = str(bs.find('script', {'type': 'application/json'}).contents).replace('[', '').replace(']',
+                                                                                                                    '')[
+                          1:-1]
+
+            try:
+                information = json.loads(information)
+                information1 = json.loads(information1)
+            except json.decoder.JSONDecodeError as e:
+                print('Could not parse json')
+                continue
+            try:
+                language = information['inLanguage']
+            except KeyError:
+                language = None
+            if language != 'English' and language is not None:
+                print('Book not in english')
+                continue
+
+            title = information['name']
+            try:
+                page_count = information['numberOfPages']
+            except KeyError as e:
+                page_count = None
+            try:
+                author_name = information['author']['name']
+            except KeyError:
+                author_name = None
+            try:
+                average_rating = information['aggregateRating']['ratingValue']
+            except KeyError:
+                average_rating = None
+            try:
+                num_ratings = information['aggregateRating']['ratingCount']
+            except KeyError:
+                num_ratings = None
+            try:
+                num_reviews = information['aggregateRating']['reviewCount']
+            except KeyError:
+                num_reviews = None
+            try:
+                genre = str(bs.find('span', {'class': 'BookPageMetadataSection__genreButton'}).find('a').attrs['href'])[33:]
+            except AttributeError as e:
+                genre = None
+            print(json.dumps(information))
+            try:
+                isbn = information['isbn']
+            except KeyError:
+                isbn = None
+            store(title, genre, author_name, summary, page_count, average_rating, num_ratings,
+                  num_reviews, href, isbn, 'books')
+        i += 1
+        with open('location.txt', 'w') as file:
+            file.write(f'{i}\n')
+            file.write(str(shelf))
+    shelf += 1
+    with open('location.txt', 'w') as file:
+        file.write(f'{i}\n')
+        file.write(str(shelf))
+
+
+def store(title, genre, author_name, summary, page_count, average_rating, num_ratings,
+          num_reviews, url, isbn, table_name):
+    conn = pymysql.connect(host='127.0.0.1', user='root',
+                           passwd='6456456456456456-*-*/hfd -*-/*-gd*//>?[gdfg', db='mysql')
+    cur = conn.cursor()
+    cur.execute('USE goodreads')
+    cur.execute(f'INSERT INTO {table_name} (Title, Genre, Author_Name, Summary, Page_Count, Average_Rating, '
+                f'Num_Ratings, '
+                'Num_Reviews, url, isbn) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                (title, genre, author_name, summary, page_count, average_rating, num_ratings
+                 , num_reviews, url, isbn))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+scrape(log_in(), shelves, start_url)
