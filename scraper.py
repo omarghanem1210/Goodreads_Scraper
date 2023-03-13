@@ -7,9 +7,6 @@ from selenium.webdriver.common.by import By
 import pymysql
 import re
 
-start_url = 'https://www.goodreads.com/shelf/show/'
-shelves = ['published-2020', 'published-2021', 'published-2022', 'published-2023']
-
 
 def log_in():
     email = 'omarghanem1210@gmail.com'
@@ -25,24 +22,29 @@ def log_in():
     sign_in = driver.find_element(By.ID, 'signInSubmit')
 
     input_email.send_keys(email)
+    time.sleep(5)
     input_password.send_keys(password)
+    time.sleep(2)
     sign_in.click()
     return driver
 
 
-def scrape(driver, shelves, start_url):
+def scrape(driver, start_url, table_name, shelves=None):
     with open('location.txt', 'r') as file:
         i = int(file.readline())
         shelf = int(file.readline())
 
     while True:
-        current_page = f'{start_url}/{shelves[shelf]}?page={i}'
+        if shelves != None:
+            current_page = f'{start_url}/{shelves[shelf]}?page={i}'
+        else:
+            current_page = f'{start_url}?page={i}'
         driver.get(current_page)
 
         html = driver.page_source.encode('utf-8').strip()
         bs = BeautifulSoup(html, 'lxml')
 
-        book_links = bs.find_all('a', {'class': 'bookTitle'})
+        book_links = bs.find_all('a', {'class': 'bookTitle', 'itemprop': 'url'})
         if len(book_links) == 0:
             break
         for link in book_links:
@@ -69,13 +71,10 @@ def scrape(driver, shelves, start_url):
             information = str(bs.find('script', {'type': 'application/ld+json'}).contents).replace('[', '').replace(']',
                                                                                                                     '')[
                           1:-1]
-            information1 = str(bs.find('script', {'type': 'application/json'}).contents).replace('[', '').replace(']',
-                                                                                                                    '')[
-                          1:-1]
 
             try:
                 information = json.loads(information)
-                information1 = json.loads(information1)
+
             except json.decoder.JSONDecodeError as e:
                 print('Could not parse json')
                 continue
@@ -118,7 +117,7 @@ def scrape(driver, shelves, start_url):
             except KeyError:
                 isbn = None
             store(title, genre, author_name, summary, page_count, average_rating, num_ratings,
-                  num_reviews, href, isbn, 'books')
+                  num_reviews, href, isbn, table_name)
         i += 1
         with open('location.txt', 'w') as file:
             file.write(f'{i}\n')
@@ -145,4 +144,3 @@ def store(title, genre, author_name, summary, page_count, average_rating, num_ra
     conn.close()
 
 
-scrape(log_in(), shelves, start_url)
