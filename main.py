@@ -5,7 +5,7 @@ import pandas as pd
 app = Dash(__name__)
 
 conn = pymysql.connect(host='127.0.0.1', user='root',
-                       passwd='6456456456456456-*-*/hfd -*-/*-gd*//>?[gdfg', db='mysql')
+                       passwd='', db='mysql')
 cur = conn.cursor()
 cur.execute('USE goodreads')
 cur.execute('SHOW TABLES;')

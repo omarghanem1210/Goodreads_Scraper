@@ -1,6 +1,8 @@
 import json
 import time
 from urllib.error import HTTPError
+
+import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -9,8 +11,8 @@ import re
 
 
 def log_in():
-    email = 'omarghanem1210@gmail.com'
-    password = 'sekiro18*'
+    email = ''
+    password = ''
     driver = webdriver.Chrome()
     driver.get('https://www.goodreads.com/ap/signin?language=en_US&openid.assoc_handle=amzn_goodreads_web_na&openid'
                '.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F'
@@ -29,10 +31,14 @@ def log_in():
     return driver
 
 
-def scrape(driver, start_url, table_name, shelves=None):
+def scrape(driver, start_url, table_name, shelves=None, as_dataframe=False):
     with open('location.txt', 'r') as file:
         i = int(file.readline())
         shelf = int(file.readline())
+    if as_dataframe:
+        books_data = pd.DataFrame(
+            columns=['Title', 'Genre', 'Author_Name', 'Summary', 'Page_Count', 'Average_Rating', 'Num_Ratings',
+                     'Num_Reviews', 'url', 'isbn'])
 
     while True:
         if shelves != None:
@@ -108,7 +114,8 @@ def scrape(driver, start_url, table_name, shelves=None):
             except KeyError:
                 num_reviews = None
             try:
-                genre = str(bs.find('span', {'class': 'BookPageMetadataSection__genreButton'}).find('a').attrs['href'])[33:]
+                genre = str(bs.find('span', {'class': 'BookPageMetadataSection__genreButton'}).find('a').attrs['href'])[
+                        33:]
             except AttributeError as e:
                 genre = None
             print(json.dumps(information))
@@ -116,8 +123,16 @@ def scrape(driver, start_url, table_name, shelves=None):
                 isbn = information['isbn']
             except KeyError:
                 isbn = None
-            store(title, genre, author_name, summary, page_count, average_rating, num_ratings,
+            if not as_dataframe:
+                store(title, genre, author_name, summary, page_count, average_rating, num_ratings,
                   num_reviews, href, isbn, table_name)
+            else:
+                books_data = books_data.append(
+                    {'Title': title, 'Genre': genre, 'Author_name': author_name, 'Summary': summary,
+                     'Page_Count': page_count, 'Average_Rating': average_rating,
+                     'Num_Ratings': num_ratings
+                        , 'Num_Reviews': num_reviews, 'url': href, 'isbn': isbn})
+
         i += 1
         with open('location.txt', 'w') as file:
             file.write(f'{i}\n')
@@ -126,6 +141,8 @@ def scrape(driver, start_url, table_name, shelves=None):
     with open('location.txt', 'w') as file:
         file.write(f'{i}\n')
         file.write(str(shelf))
+    if as_dataframe:
+        return books_data
 
 
 def store(title, genre, author_name, summary, page_count, average_rating, num_ratings,
@@ -142,5 +159,3 @@ def store(title, genre, author_name, summary, page_count, average_rating, num_ra
     conn.commit()
     cur.close()
     conn.close()
-
-
